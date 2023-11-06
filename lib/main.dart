@@ -56,13 +56,12 @@ class _CarControlState extends State<CarControl> {
 
   sendCommandToESP32(String command) async {
     final esp32IpAddress =
-        '192.168.199.63'; // Замените на IP-адрес вашего ESP32
-    final esp32Port = 80; // Замените на порт вашего ESP32
+        '192.168.199.63'; 
+    final esp32Port = 80; 
 
     final url =
         Uri.parse('http://$esp32IpAddress:$esp32Port/?command=$command');
 
-    // final response = await http.get(url);
     try {
       final response = await http.get(url);
 
@@ -70,11 +69,9 @@ class _CarControlState extends State<CarControl> {
         print('Команда отправлена успешно: $command');
       } else {
         print('Ошибка при отправке команды: ${response.statusCode}');
-        // Здесь вы можете добавить дополнительную обработку ошибок
       }
     } catch (error) {
       print('Произошла ошибка при выполнении HTTP-запроса: $error');
-      // Здесь вы можете добавить обработку других ошибок, связанных с HTTP-запросом
     }
   }
 
@@ -85,13 +82,13 @@ class _CarControlState extends State<CarControl> {
   }
 
   void processVoiceCommand(String command) {
-    if (command.contains("вперед")) {
+    if (command.contains("вперёд")) {
       sendCommandToESP32('forward');
     } else if (command.contains("назад")) {
       sendCommandToESP32('reverse');
-    } else if (command.contains("влево")) {
+    } else if (command.contains("лево")) {
       sendCommandToESP32('left');
-    } else if (command.contains("вправо")) {
+    } else if (command.contains("право")) {
       sendCommandToESP32('right');
     } else if (command.contains("стоп")) {
       sendCommandToESP32('stop');
@@ -126,7 +123,7 @@ class _CarControlState extends State<CarControl> {
       });
 
       if (commandQueue.isNotEmpty) {
-        commandTimer = Timer(Duration(seconds: 1), executeNextCommand);
+        commandTimer = Timer(const Duration(seconds: 1), executeNextCommand);
       }
     }
   }
@@ -168,16 +165,11 @@ class _CarControlState extends State<CarControl> {
     addToCommandQueue(text);
   }
 
-  // void onRecognitionComplete(String text) {
-  //   setState(() => _isListening = false);
-  // }
 
   void onRecognitionComplete(String text) {
     setState(() {
       _isListening = false;
       processVoiceCommand(transcription);
-
-      // Сбрасываем флаги движения
       isMovingForward = false;
       isMovingReverse = false;
       isMovingLeft = false;
@@ -192,12 +184,6 @@ class _CarControlState extends State<CarControl> {
     });
   }
 
-  void _stopMovingForward() {
-    setState(() {
-      isMovingForward = false;
-      sendCommandToESP32('stop'); // Остановить движение
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +202,7 @@ class _CarControlState extends State<CarControl> {
                   onLongPressEnd: (details) {
                     setState(() {
                       isMovingForward = false;
-                      sendCommandToESP32('stop'); // Остановить движение
+                      sendCommandToESP32('stop'); 
                     });
                   },
                   child: Container(
@@ -241,7 +227,7 @@ class _CarControlState extends State<CarControl> {
                       onLongPressEnd: (details) {
                         setState(() {
                           isMovingLeft = false;
-                          sendCommandToESP32('stop'); // Остановить движение
+                          sendCommandToESP32('stop'); 
                         });
                       },
                       child: Container(
@@ -263,7 +249,7 @@ class _CarControlState extends State<CarControl> {
                       onLongPressEnd: (details) {
                         setState(() {
                           isMovingRight = false;
-                          sendCommandToESP32('stop'); // Остановить движение
+                          sendCommandToESP32('stop');
                         });
                       },
                       child: Container(
@@ -287,7 +273,7 @@ class _CarControlState extends State<CarControl> {
                   onLongPressEnd: (details) {
                     setState(() {
                       isMovingReverse = false;
-                      sendCommandToESP32('stop'); // Остановить движение
+                      sendCommandToESP32('stop'); 
                     });
                   },
                   child: Container(
