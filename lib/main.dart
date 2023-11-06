@@ -62,12 +62,19 @@ class _CarControlState extends State<CarControl> {
     final url =
         Uri.parse('http://$esp32IpAddress:$esp32Port/?command=$command');
 
-    final response = await http.get(url);
+    // final response = await http.get(url);
+    try {
+      final response = await http.get(url);
 
-    if (response.statusCode == 200) {
-      print('Команда отправлена успешно: $command');
-    } else {
-      print('Ошибка при отправке команды: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        print('Команда отправлена успешно: $command');
+      } else {
+        print('Ошибка при отправке команды: ${response.statusCode}');
+        // Здесь вы можете добавить дополнительную обработку ошибок
+      }
+    } catch (error) {
+      print('Произошла ошибка при выполнении HTTP-запроса: $error');
+      // Здесь вы можете добавить обработку других ошибок, связанных с HTTP-запросом
     }
   }
 
@@ -90,11 +97,6 @@ class _CarControlState extends State<CarControl> {
       sendCommandToESP32('stop');
     }
   }
-
-  // void moveForward() {
-  //   if (command.contains("вперед")) {
-  //     sendCommandToESP32('forward');
-  // }
 
   void activateSpeechRecognizer() {
     _speech = SpeechRecognition();
@@ -166,8 +168,35 @@ class _CarControlState extends State<CarControl> {
     addToCommandQueue(text);
   }
 
+  // void onRecognitionComplete(String text) {
+  //   setState(() => _isListening = false);
+  // }
+
   void onRecognitionComplete(String text) {
-    setState(() => _isListening = false);
+    setState(() {
+      _isListening = false;
+      processVoiceCommand(transcription);
+
+      // Сбрасываем флаги движения
+      isMovingForward = false;
+      isMovingReverse = false;
+      isMovingLeft = false;
+      isMovingRight = false;
+    });
+  }
+
+  void _startMovingForward() {
+    setState(() {
+      isMovingForward = true;
+      sendCommandToESP32('forward');
+    });
+  }
+
+  void _stopMovingForward() {
+    setState(() {
+      isMovingForward = false;
+      sendCommandToESP32('stop'); // Остановить движение
+    });
   }
 
   @override
@@ -176,46 +205,13 @@ class _CarControlState extends State<CarControl> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          // ElevatedButton(
-          //   onPressed: () {
-          //     sendCommandToESP32('forward');
-          //   },
-          //   child: Text('Вперед'),
-          // ),
-          // ElevatedButton(
-          //   onPressed: () {
-          //     sendCommandToESP32('left');
-          //   },
-          //   child: Text('Влево'),
-          // ),
-          // ElevatedButton(
-          //   onPressed: () {
-          //     sendCommandToESP32('stop');
-          //   },
-          //   child: Text('Стоп'),
-          // ),
-          // ElevatedButton(
-          //   onPressed: () {
-          //     sendCommandToESP32('right');
-          //   },
-          //   child: Text('Вправо'),
-          // ),
-          // ElevatedButton(
-          //   onPressed: () {
-          //     sendCommandToESP32('reverse');
-          //   },
-          //   child: Text('Назад'),
-          // ),
           Container(
             height: 300,
             child: Column(
               children: [
                 GestureDetector(
-                  onLongPressStart: (details) {
-                    setState(() {
-                      isMovingForward = true;
-                      sendCommandToESP32('forward');
-                    });
+                  onLongPress: () {
+                    _startMovingForward();
                   },
                   onLongPressEnd: (details) {
                     setState(() {
@@ -334,14 +330,28 @@ class _CarControlState extends State<CarControl> {
     );
   }
 
-  Widget _buildButton({required String label, VoidCallback? onPressed}) =>
-      Padding(
-          padding: EdgeInsets.all(12.0),
-          child: ElevatedButton(
-            onPressed: onPressed,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ));
+  Widget _buildButton({required String label, VoidCallback? onPressed}) {
+    if (onPressed == null) {
+      return Padding(
+        padding: EdgeInsets.all(12.0),
+        child: ElevatedButton(
+          onPressed: null,
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+        padding: EdgeInsets.all(12.0),
+        child: ElevatedButton(
+          onPressed: _isListening ? null : onPressed,
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ));
+  }
 }
