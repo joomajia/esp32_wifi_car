@@ -54,10 +54,37 @@ class _CarControlState extends State<CarControl> {
   bool isMovingLeft = false;
   bool isMovingRight = false;
 
-  sendCommandToESP32(String command) async {
-    final esp32IpAddress =
-        '192.168.199.63'; 
-    final esp32Port = 80; 
+  double motorSpeed = 0.0; // Store the current motor speed.
+
+  // Future<void> controlMotorSpeed(String command, [int? speed]) async {
+  //   final Uri baseUri = Uri.parse("http://your_esp32_ip/");
+  //   final Map<String, String> queryParameters = {
+  //     'command': command,
+  //   };
+
+  //   if (speed != null) {
+  //     queryParameters['speed'] = speed.toString();
+  //   }
+
+  //   final Uri uri = baseUri.replace(queryParameters: queryParameters);
+  //   final response = await http.get(uri);
+
+  //   if (response.statusCode == 200) {
+  //     // Command successful
+  //     if (command == "speed") {
+  //       motorSpeed = speed!.toDouble();
+  //     }
+  //   } else {
+  //     // Command failed
+  //     print("Failed to send command: $command");
+  //   }
+  // }
+
+  //double motorSpeed = 0.0; // Store the current motor speed.
+
+  Future<void> sendCommandToESP32(String command) async {
+    final esp32IpAddress = '192.168.199.63';
+    final esp32Port = 80;
 
     final url =
         Uri.parse('http://$esp32IpAddress:$esp32Port/?command=$command');
@@ -66,19 +93,71 @@ class _CarControlState extends State<CarControl> {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        print('Команда отправлена успешно: $command');
+        print('Command sent successfully: $command');
       } else {
-        print('Ошибка при отправке команды: ${response.statusCode}');
+        print('Error sending command: ${response.statusCode}');
       }
     } catch (error) {
-      print('Произошла ошибка при выполнении HTTP-запроса: $error');
+      print('Error executing HTTP request: $error');
     }
   }
+
+  Future<void> controlMotorSpeed(int speed) async {
+    // Use sendCommandToESP32 to control motor speed
+    const command = "speed";
+    await sendCommandToESP32("$command&speed=$speed");
+    motorSpeed = speed.toDouble();
+  }
+
+  // sendCommandToESP32(String command) async {
+  //   final esp32IpAddress = '192.168.199.63';
+  //   final esp32Port = 80;
+
+  //   final url =
+  //       Uri.parse('http://$esp32IpAddress:$esp32Port/?command=$command');
+
+  //   try {
+  //     final response = await http.get(url);
+
+  //     if (response.statusCode == 200) {
+  //       print('Команда отправлена успешно: $command');
+  //     } else {
+  //       print('Ошибка при отправке команды: ${response.statusCode}');
+  //     }
+  //   } catch (error) {
+  //     print('Произошла ошибка при выполнении HTTP-запроса: $error');
+  //   }
+  // }
 
   @override
   void initState() {
     super.initState();
     activateSpeechRecognizer();
+  }
+
+  void moveSquare() async {
+    for (int i = 0; i < 7; i++) {
+      // sendCommandToESP32('forward'); // Движение вперед
+      // await Future.delayed(const Duration(seconds: 1)); // Пауза 1 секунда
+      // sendCommandToESP32('stop'); // Остановка
+      sendCommandToESP32('right'); // Поворот вправо
+      await Future.delayed(
+          const Duration(milliseconds: 150)); // Пауза 0.5 секунды
+      sendCommandToESP32('stop'); // Остановка
+      await Future.delayed(const Duration(milliseconds: 1000));
+      sendCommandToESP32('forward'); // Движение вперед
+      await Future.delayed(const Duration(milliseconds: 500));
+      sendCommandToESP32('left'); // Остановка
+      await Future.delayed(
+          const Duration(milliseconds: 200)); // Задержка между движениями
+      sendCommandToESP32('stop'); // Остановка
+      await Future.delayed(const Duration(milliseconds: 1000));
+      sendCommandToESP32('forward'); // Движение вперед
+      await Future.delayed(const Duration(milliseconds: 300));
+      sendCommandToESP32('stop');
+      await Future.delayed(const Duration(milliseconds: 10000));
+    }
+    
   }
 
   void processVoiceCommand(String command) {
@@ -91,6 +170,9 @@ class _CarControlState extends State<CarControl> {
     } else if (command.contains("право")) {
       sendCommandToESP32('right');
     } else if (command.contains("стоп")) {
+      sendCommandToESP32('stop');
+    } else if (command.contains("символ")) {
+      moveSquare();
       sendCommandToESP32('stop');
     }
   }
@@ -165,7 +247,6 @@ class _CarControlState extends State<CarControl> {
     addToCommandQueue(text);
   }
 
-
   void onRecognitionComplete(String text) {
     setState(() {
       _isListening = false;
@@ -184,6 +265,26 @@ class _CarControlState extends State<CarControl> {
     });
   }
 
+  void _startMovingLeft() {
+    setState(() {
+      isMovingLeft = true;
+      sendCommandToESP32('left');
+    });
+  }
+
+  void _startMovingRight() {
+    setState(() {
+      isMovingRight = true;
+      sendCommandToESP32('right');
+    });
+  }
+
+  void _startMovingReverse() {
+    setState(() {
+      isMovingReverse = true;
+      sendCommandToESP32('reverse');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,13 +297,13 @@ class _CarControlState extends State<CarControl> {
             child: Column(
               children: [
                 GestureDetector(
-                  onLongPress: () {
+                  onTapDown: (details) {
                     _startMovingForward();
                   },
-                  onLongPressEnd: (details) {
+                  onTapUp: (details) {
                     setState(() {
                       isMovingForward = false;
-                      sendCommandToESP32('stop'); 
+                      sendCommandToESP32('stop');
                     });
                   },
                   child: Container(
@@ -218,16 +319,13 @@ class _CarControlState extends State<CarControl> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     GestureDetector(
-                      onLongPressStart: (details) {
-                        setState(() {
-                          isMovingLeft = true;
-                          sendCommandToESP32('left');
-                        });
+                      onTapDown: (details) {
+                        _startMovingLeft();
                       },
-                      onLongPressEnd: (details) {
+                      onTapUp: (details) {
                         setState(() {
                           isMovingLeft = false;
-                          sendCommandToESP32('stop'); 
+                          sendCommandToESP32('stop');
                         });
                       },
                       child: Container(
@@ -240,13 +338,10 @@ class _CarControlState extends State<CarControl> {
                       ),
                     ),
                     GestureDetector(
-                      onLongPressStart: (details) {
-                        setState(() {
-                          isMovingRight = true;
-                          sendCommandToESP32('right');
-                        });
+                      onTapDown: (details) {
+                        _startMovingRight();
                       },
-                      onLongPressEnd: (details) {
+                      onTapUp: (details) {
                         setState(() {
                           isMovingRight = false;
                           sendCommandToESP32('stop');
@@ -264,16 +359,13 @@ class _CarControlState extends State<CarControl> {
                   ],
                 ),
                 GestureDetector(
-                  onLongPressStart: (details) {
-                    setState(() {
-                      isMovingReverse = true;
-                      sendCommandToESP32('reverse');
-                    });
+                  onTapDown: (details) {
+                    _startMovingReverse();
                   },
-                  onLongPressEnd: (details) {
+                  onTapUp: (details) {
                     setState(() {
                       isMovingReverse = false;
-                      sendCommandToESP32('stop'); 
+                      sendCommandToESP32('stop');
                     });
                   },
                   child: Container(
@@ -288,6 +380,14 @@ class _CarControlState extends State<CarControl> {
               ],
             ),
           ),
+          // Slider(
+          //   value: motorSpeed,
+          //   min: 0,
+          //   max: 255, // Adjust this according to your motor's PWM range.
+          //   onChanged: (value) {
+          //     controlMotorSpeed(value.toInt());
+          //   },
+          // ),
           Container(
               height: 150,
               width: 200,
@@ -319,7 +419,7 @@ class _CarControlState extends State<CarControl> {
   Widget _buildButton({required String label, VoidCallback? onPressed}) {
     if (onPressed == null) {
       return Padding(
-        padding: EdgeInsets.all(12.0),
+        padding: EdgeInsets.all(7.0),
         child: ElevatedButton(
           onPressed: null,
           child: Text(
